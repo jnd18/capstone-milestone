@@ -1,0 +1,232 @@
+---
+title: "Data Science Capstone Milestone Report"
+author: "Jonathan Dorsey"
+date: "June 12, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(tidytext)
+library(kableExtra)
+set.seed(9999)
+```
+
+## Introduction
+
+This is a preliminary report for the Data Science Specialization Capstone on Coursera. The purpose of this report is to explore the data in preparation for predictive modeling. The R Markdown file that generated this report is available on github at PUT URL HERE.
+
+## Data
+
+The data for the capstone project is available at https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip. Inside the zipped archive is a directory containing three english language text files. These text files were gathered from public websites by a web crawler. 
+
+There are three files, corresponding to three types of text sources: twitter, news websites, and blogs. The twitter file is 159 MB, the news file is 196 MB, and the blogs file is 200 MB.
+
+## Analysis
+
+```{r, cache = TRUE}
+# Load the files
+twitter <- readLines("en_US.twitter.txt", encoding = "UTF-8", warn = FALSE)
+news <- readLines("en_US.news.txt", encoding = "UTF-8", warn = FALSE)
+blogs <- readLines("en_US.blogs.txt", encoding = "UTF-8", warn = FALSE)
+
+# The number of lines in each file.
+t_lines <- length(twitter)
+n_lines <- length(news)
+b_lines <- length(blogs)
+
+# Convert to tibbles
+twitter <- data_frame(text = twitter)
+news <- data_frame(text = news)
+blogs <- data_frame(text = blogs)
+```
+
+```{r, cache = TRUE}
+# Word Tibbles
+twitter_1 <- twitter %>% unnest_tokens(word, text)
+news_1 <- news %>% unnest_tokens(word, text)
+blogs_1 <- blogs %>% unnest_tokens(word, text)
+
+# Get total number of words
+t_words <- nrow(twitter_1)
+n_words <- nrow(news_1)
+b_words <- nrow(blogs_1)
+
+# Now make frequency tibbles
+twitter_1 <- twitter_1 %>%
+    anti_join(stop_words, by = "word") %>%
+    count(word, sort = TRUE)
+
+news_1 <- news_1 %>%
+    anti_join(stop_words, by = "word") %>%
+    count(word, sort = TRUE)
+
+blogs_1 <- blogs_1 %>%
+    anti_join(stop_words, by = "word") %>%
+    count(word, sort = TRUE)
+
+# Bigram Frequency Tibbles
+twitter_2 <- twitter %>%
+    unnest_tokens(bigram, text, token = "ngrams", n = 2) %>%
+    separate(bigram, c("word1", "word2"), sep = " ") %>%
+    filter(!word1 %in% stop_words$word) %>%
+    filter(!word2 %in% stop_words$word) %>%
+    count(word1, word2, sort = TRUE)
+
+
+news_2 <- news %>%
+    unnest_tokens(bigram, text, token = "ngrams", n = 2) %>%
+    separate(bigram, c("word1", "word2"), sep = " ") %>%
+    filter(!word1 %in% stop_words$word) %>%
+    filter(!word2 %in% stop_words$word) %>%
+    count(word1, word2, sort = TRUE)
+
+
+blogs_2 <- blogs %>%
+    unnest_tokens(bigram, text, token = "ngrams", n = 2) %>%
+    separate(bigram, c("word1", "word2"), sep = " ") %>%
+    filter(!word1 %in% stop_words$word) %>%
+    filter(!word2 %in% stop_words$word) %>%
+    count(word1, word2, sort = TRUE)
+
+# Trigram Frequency Tibbles
+twitter_3 <- twitter %>%
+    unnest_tokens(trigram, text, token = "ngrams", n = 3) %>%
+    separate(trigram, c("word1", "word2", "word3"), sep = " ") %>%
+    filter(!word1 %in% stop_words$word) %>%
+    filter(!word2 %in% stop_words$word) %>%
+    filter(!word3 %in% stop_words$word) %>%
+    count(word1, word2, word3, sort = TRUE)
+
+
+news_3 <- news %>%
+    unnest_tokens(trigram, text, token = "ngrams", n = 3) %>%
+    separate(trigram, c("word1", "word2", "word3"), sep = " ") %>%
+    filter(!word1 %in% stop_words$word) %>%
+    filter(!word2 %in% stop_words$word) %>%
+    filter(!word3 %in% stop_words$word) %>%
+    count(word1, word2, word3, sort = TRUE)
+    
+blogs_3 <- blogs %>%
+    unnest_tokens(trigram, text, token = "ngrams", n = 3) %>%
+    separate(trigram, c("word1", "word2", "word3"), sep = " ") %>%
+    filter(!word1 %in% stop_words$word) %>%
+    filter(!word2 %in% stop_words$word) %>%
+    filter(!word3 %in% stop_words$word) %>%
+    count(word1, word2, word3, sort = TRUE)
+```
+
+First, some basic descriptions. The Twitter file contains `r t_lines` lines and `r t_words` words. The news file contains `r n_lines` lines and `r n_words` words. The blogs file contains `r b_lines` lines and `r b_words` words. Below we have tables displaying the top ten most frequent words in each source, removing common so-called "stop words", so that the ten words are more illustrative of what makes the text unique. The top words for each source look very different.
+
+```{r}
+# Twitter word frequency table
+twitter_1 %>%
+    head(n = 10) %>%
+    mutate(rank = 1:10) %>%
+    select(rank, word, occurences = n) %>%
+    kable %>%
+    kable_styling(full_width = F) %>%
+    add_header_above(c("Twitter" = 3))
+
+news_1 %>%
+    head(n = 10) %>%
+    mutate(rank = 1:10) %>%
+    select(rank, word, occurences = n) %>%
+    kable %>%
+    kable_styling(full_width = F) %>%
+    add_header_above(c("News" = 3))
+
+blogs_1 %>%
+    head(n = 10) %>%
+    mutate(rank = 1:10) %>%
+    select(rank, word, occurences = n) %>%
+    kable %>%
+    kable_styling(full_width = F) %>%
+    add_header_above(c("Blogs" = 3))
+
+```
+
+Below, we have histograms of the word frequencies from different sources. The histograms show that most words appear very few times, but a few words appear frequently. This is with the common words removed. The distribution of frequencies is highly skewed-right.
+
+```{r}
+ggplot(twitter_1, aes(x = n)) +
+    geom_histogram(bins = 100) +
+    ggtitle("Twitter Word Frequencies")
+
+ggplot(news_1, aes(x = n)) +
+    geom_histogram(bins = 100) +
+    ggtitle("News Word Frequencies")
+
+ggplot(blogs_1, aes(x = n)) +
+    geom_histogram(bins = 100) +
+    ggtitle("Blog Word Frequencies")
+```
+
+Next up we have the bigram frequency tables for the three sources, again with common words removed. A bigram is just a pair of words. The Twitter table shows two forms of "Mother's Day." Perhaps the data were collected around Mother's Day. The news table shows many city names. The blog table has a few pairs of numbers, which we believe come from fractions used in recipes, like "1/2 cup". The histograms of word frequencies look almost identical to the ones above, except with even more mass to the left. It makes sense that more pairs of words appear only once. Thus, we won't bother to display the histograms.
+
+```{r}
+# Twitter bigram frequency table
+twitter_2 %>%
+    head(n = 10) %>%
+    mutate(rank = 1:10, bigram = paste(word1, word2)) %>%
+    select(rank, bigram, occurences = n) %>%
+    kable %>%
+    kable_styling(full_width = F) %>%
+    add_header_above(c("Twitter" = 3))
+
+# news bigram frequency table
+news_2 %>%
+    head(n = 10) %>%
+    mutate(rank = 1:10, bigram = paste(word1, word2)) %>%
+    select(rank, bigram, occurences = n) %>%
+    kable %>%
+    kable_styling(full_width = F) %>%
+    add_header_above(c("News" = 3))
+
+# blogs bigram frequency table
+blogs_2 %>%
+    head(n = 10) %>%
+    mutate(rank = 1:10, bigram = paste(word1, word2)) %>%
+    select(rank, bigram, occurences = n) %>%
+    kable %>%
+    kable_styling(full_width = F) %>%
+    add_header_above(c("Blogs" = 3))
+```
+
+Finally, we have the trigram tables. For the Twitter data, we see many holidays which all occur in the beginning of the year. We also amusingly see "cake cake cake." For the news data different times of day as well as names and titles. For the blog data, we see many cooking measurements. Interestingly, "world war ii" appears frequently both in the news and on blogs, but not on Twitter. Again, the histograms just look like one huge spike on the left, so we won't display them.
+
+```{r}
+# Twitter Trigram frequency table
+twitter_3 %>%
+    head(n = 10) %>%
+    mutate(rank = 1:10, trigram = paste(word1, word2, word3)) %>%
+    select(rank, trigram, occurences = n) %>%
+    kable %>%
+    kable_styling(full_width = F) %>%
+    add_header_above(c("Twitter" = 3))
+
+# news Trigram frequency table
+news_3 %>%
+    head(n = 10) %>%
+    mutate(rank = 1:10, trigram = paste(word1, word2, word3)) %>%
+    select(rank, trigram, occurences = n) %>%
+    kable %>%
+    kable_styling(full_width = F) %>%
+    add_header_above(c("News" = 3))
+
+# blogs Trigram frequency table
+blogs_3 %>%
+    head(n = 10) %>%
+    mutate(rank = 1:10, trigram = paste(word1, word2, word3)) %>%
+    select(rank, trigram, occurences = n) %>%
+    kable %>%
+    kable_styling(full_width = F) %>%
+    add_header_above(c("Blogs" = 3))
+```
+
+## Plans for the App
+
+Using the basic techniques we've developed for exploring the data, we can create a simple n-gram model. To predict the next word in a sequence, we would look at the previous few words and pick the word that most commonly appears after those words in the text data. We would not remove the stopwords in this context. We could use some kind of smoothing, like adding 1 to each count of word appearances. We could also use a backoff strategy. For example, when predicting the next word from a two word sequence, if that two word sequence is common, then use the most frequent third word. If the two word sequence is uncommon, then just predict based on the second word. 
+
+With n-gram models it can be tricky to achieve high predictive performance with reasonable computational constraints. For this reason, we may try the alternative approach of training a recurrent neural net to predict the next character in a sequence of characters. This would frontload the computational burden into the training time and hopefully deliver a more performant app once the model is trained. Another benefit of this approach is that predicting on the basis of characters allows us to complete partial words, just like a real predictive keyboard.
